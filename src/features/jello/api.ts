@@ -30,6 +30,12 @@ export async function listFriends() {
   return (data ?? []) as Friend[];
 }
 
+export async function getMyProfile() {
+  const { data, error } = await client().from('profiles').select('id, username, display_name, avatar_path').single();
+  if (error) throw error;
+  return data as Friend;
+}
+
 export async function searchPeople(query: string) {
   const { data, error } = await client().rpc('search_profiles', { query, result_limit: 20 });
   if (error) throw error;
@@ -49,6 +55,11 @@ export async function sendFriendRequest(targetId: string) {
 
 export async function respondFriendRequest(requestId: string, accept: boolean) {
   const { error } = await client().rpc('respond_friend_request', { request_id: requestId, accept });
+  if (error) throw error;
+}
+
+export async function removeFriend(targetId: string) {
+  const { error } = await client().rpc('remove_friend', { target_id: targetId });
   if (error) throw error;
 }
 
