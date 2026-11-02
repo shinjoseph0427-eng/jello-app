@@ -1,5 +1,6 @@
 import type { CameraCapturedPicture } from 'expo-camera';
 import * as Crypto from 'expo-crypto';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { supabase } from '@/lib/supabase';
 
 export type Friend = { id: string; username: string; display_name: string; avatar_path: string | null; username_completed?: boolean };
@@ -18,10 +19,38 @@ export type Moment = {
   completed_at: string | null;
   expires_at: string;
 };
+export type PreparedPhoto = { uri: string; width: number; height: number; bytes: ArrayBuffer; byteLength: number };
+
+const MAX_PHOTO_EDGE = 1536;
+const JPEG_QUALITY = 0.72;
 
 function client() {
   if (!supabase) throw new Error('Supabase is not configured.');
   return supabase;
+}
+
+const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+async function withRetry<T>(operation: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try { return await operation(); }
+    catch (error) { lastError = error; if (attempt < attempts - 1) await delay(250 * (2 ** attempt)); }
+  }
+  throw lastError;
+}
+
+export async function preparePhoto(photo: CameraCapturedPicture): Promise<PreparedPhoto> {
+  const scale = Math.min(1, MAX_PHOTO_EDGE / Math.max(photo.width, photo.height));
+  const width = Math.max(1, Math.round(photo.width * scale));
+  const height = Math.max(1, Math.round(photo.height * scale));
+  const context = ImageManipulator.manipulate(photo.uri);
+  if (scale < 1) context.resize({ width, height });
+  const rendered = await context.renderAsync();
+  const result = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: JPEG_QUALITY });
+  const response = await fetch(result.uri);
+  if (!response.ok) throw new Error('Could not prepare the captured photo.');
+  const bytes = await response.arrayBuffer();
+  return { uri: result.uri, width: result.width, height: result.height, bytes, byteLength: bytes.byteLength };
 }
 
 export async function listFriends() {
@@ -72,60 +101,63 @@ export async function removeFriend(targetId: string) {
   if (error) throw error;
 }
 
-async function uploadPhoto(momentId: string, side: 1 | 2, photo: CameraCapturedPicture) {
-  const { data: userData, error: userError } = await client().auth.getUser();
-  if (userError || !userData.user) throw userError ?? new Error('Sign in required.');
-  const path = `${userData.user.id}/${momentId}/${side}.jpg`;
-  const response = await fetch(photo.uri);
-  if (!response.ok) throw new Error('Could not read the captured photo.');
-  const bytes = await response.arrayBuffer();
-  const { error: uploadError } = await client().storage.from('jello-photos').upload(path, bytes, {
-    contentType: 'image/jpeg',
-    upsert: false,
-  });
-  if (uploadError) throw uploadError;
-  const { error: attachError } = await client().rpc('attach_moment_photo', {
-    target_moment_id: momentId,
-    photo_side: side,
-    object_path: path,
-    photo_width: photo.width,
-    photo_height: photo.height,
-  });
-  if (attachError) {
+async function uploadPhoto(momentId: string, side: 1 | 2, prepared: Promise<PreparedPhoto>) {
+  const { data: sessionData } = await client().auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user) throw new Error('Sign in required.');
+  const path = `${user.id}/${momentId}/${side}.jpg`;
+  const photo = await prepared;
+  const startedAt = Date.now();
+  try {
+    await withRetry(async () => {
+      const { error } = await client().storage.from('jello-photos').upload(path, photo.bytes, {
+        contentType: 'image/jpeg', cacheControl: '31536000', upsert: true,
+      });
+      if (error) throw error;
+    });
+    await withRetry(async () => {
+      const { error } = await client().rpc('attach_moment_photo', {
+        target_moment_id: momentId, photo_side: side, object_path: path,
+        photo_width: photo.width, photo_height: photo.height,
+      });
+      if (error) throw error;
+    });
+    if (__DEV__) console.info('[photo-upload]', { side, bytes: photo.byteLength, elapsedMs: Date.now() - startedAt });
+  } catch (error) {
     await client().storage.from('jello-photos').remove([path]);
-    throw attachError;
+    throw error;
   }
 }
 
-export async function sendFirstSide(friendId: string, photo: CameraCapturedPicture) {
-  const { data, error } = await client().rpc('create_moment', {
+export async function sendFirstSide(friendId: string, photo: CameraCapturedPicture, preparedPhoto?: Promise<PreparedPhoto>) {
+  const prepared = preparedPhoto ?? preparePhoto(photo);
+  const momentRequest = client().rpc('create_moment', {
     target_id: friendId,
     request_key: Crypto.randomUUID(),
   });
+  const { data, error } = await momentRequest;
   if (error) throw error;
   const momentId = data as string;
-  await uploadPhoto(momentId, 1, photo);
+  await uploadPhoto(momentId, 1, prepared);
   return momentId;
 }
 
-export async function sendReply(momentId: string, photo: CameraCapturedPicture) {
-  await uploadPhoto(momentId, 2, photo);
+export async function sendReply(momentId: string, photo: CameraCapturedPicture, preparedPhoto?: Promise<PreparedPhoto>) {
+  await uploadPhoto(momentId, 2, preparedPhoto ?? preparePhoto(photo));
 }
 
 export async function listMoments() {
   const { data, error } = await client().rpc('list_moments');
   if (error) throw error;
   const moments = (data ?? []) as Moment[];
-  return Promise.all(moments.map(async (moment) => {
-    const paths = [moment.side_one_path, moment.side_two_path].filter(Boolean) as string[];
-    if (!paths.length) return moment;
-    const { data: signed, error: signedError } = await client().storage.from('jello-photos').createSignedUrls(paths, 3600);
-    if (signedError) throw signedError;
-    const urls = new Map(signed.map((item, index) => [paths[index], item.signedUrl]));
-    return {
-      ...moment,
-      side_one_url: moment.side_one_path ? (urls.get(moment.side_one_path) ?? undefined) : undefined,
-      side_two_url: moment.side_two_path ? (urls.get(moment.side_two_path) ?? undefined) : undefined,
-    };
+  const paths = [...new Set(moments.flatMap((moment) => [moment.side_one_path, moment.side_two_path]).filter(Boolean) as string[])];
+  if (!paths.length) return moments;
+  const { data: signed, error: signedError } = await client().storage.from('jello-photos').createSignedUrls(paths, 3600);
+  if (signedError) throw signedError;
+  const urls = new Map(signed.map((item, index) => [paths[index], item.signedUrl]));
+  return moments.map((moment) => ({
+    ...moment,
+    side_one_url: moment.side_one_path ? (urls.get(moment.side_one_path) ?? undefined) : undefined,
+    side_two_url: moment.side_two_path ? (urls.get(moment.side_two_path) ?? undefined) : undefined,
   }));
 }
