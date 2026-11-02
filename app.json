@@ -15,6 +15,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Jello uses the camera to create a Two Sides moment with a friend.",
+        "NSContactsUsageDescription": "Jello uses your contacts to help you invite friends. Contacts stay on your device and are not posted publicly.",
         "NSPhotoLibraryAddUsageDescription": "Jello saves completed Two Sides moments when you choose to export them."
       }
     },
@@ -38,6 +39,7 @@
       "expo-apple-authentication",
       "expo-web-browser",
       "expo-secure-store",
+      "expo-contacts",
       [
         "expo-camera",
         {
