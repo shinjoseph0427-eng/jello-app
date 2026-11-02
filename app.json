@@ -11,12 +11,15 @@
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "app.jello.twosides",
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Jello uses the camera to create a Two Sides moment with a friend.",
         "NSPhotoLibraryAddUsageDescription": "Jello saves completed Two Sides moments when you choose to export them."
       }
     },
     "android": {
+      "package": "app.jello.twosides",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -31,6 +34,24 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
+      "expo-apple-authentication",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Jello uses the camera to create a Two Sides moment with a friend.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#FFB84D",
+          "defaultChannel": "moments"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -43,6 +64,19 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "307a90b0-4ac0-4b74-9434-9eb4fba5a459"
+      }
+    },
+    "owner": "shinjoseph0427",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/307a90b0-4ac0-4b74-9434-9eb4fba5a459"
     }
   }
 }
