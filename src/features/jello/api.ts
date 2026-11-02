@@ -20,7 +20,7 @@ export type Moment = {
   expires_at: string;
   layout: MomentLayout;
 };
-export type MomentLayout = 'vertical' | 'horizontal';
+export type MomentLayout = 'left' | 'right' | 'top' | 'bottom';
 export type PreparedPhoto = { uri: string; width: number; height: number; bytes: ArrayBuffer; byteLength: number };
 
 const MAX_PHOTO_EDGE = 1536;

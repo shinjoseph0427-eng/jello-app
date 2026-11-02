@@ -9,8 +9,8 @@ import { preparePhoto, sendReply, type MomentLayout, type PreparedPhoto } from '
 import { colors, radius, space } from '@/theme/tokens';
 
 export default function ReplyScreen() {
-  const { id, name, layout } = useLocalSearchParams<{ id: string; name?: string; layout?: MomentLayout }>();
-  const momentLayout: MomentLayout = layout === 'horizontal' ? 'horizontal' : 'vertical';
+  const { id, name, layout, sideOneUrl } = useLocalSearchParams<{ id: string; name?: string; layout?: MomentLayout; sideOneUrl?: string }>();
+  const momentLayout: MomentLayout = layout === 'right' || layout === 'top' || layout === 'bottom' ? layout : 'left';
   const camera = useRef<CameraView>(null);
   const preparedPhoto = useRef<Promise<PreparedPhoto> | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -53,9 +53,14 @@ export default function ReplyScreen() {
     return <Screen><View style={styles.center}><Text style={styles.title}>Finish their moment.</Text><Text style={styles.copy}>Camera access is needed for your side.</Text><Pressable onPress={requestPermission} style={styles.primary}><Text style={styles.primaryText}>Open camera</Text></Pressable></View></Screen>;
   }
 
+  const isColumn = momentLayout === 'top' || momentLayout === 'bottom';
+  const sideOneFirst = momentLayout === 'left' || momentLayout === 'top';
+  const theirSide = <View key="theirs" style={{ flex: 1, overflow: 'hidden', backgroundColor: '#292631', alignItems: 'center', justifyContent: 'center' }}>{sideOneUrl ? <Image source={{ uri: sideOneUrl }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <><View style={{ position: 'absolute', width: 190, height: 190, borderRadius: 95, backgroundColor: '#B9A7FF22' }} /><Text style={styles.labelText}>THEIR SIDE</Text></>}</View>;
+  const ownSide = <View key="mine" style={{ flex: 1, overflow: 'hidden' }}>{photo ? <Image source={{ uri: photo.uri }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <CameraView ref={camera} style={StyleSheet.absoluteFill} facing={facing} mode="picture" />}<View style={styles.label}><Text style={styles.labelText}>YOUR SIDE</Text></View></View>;
+
   return <Screen>
     <View style={styles.header}><Pressable onPress={() => router.back()}><Text style={styles.close}>×</Text></Pressable><View><Text style={styles.eyebrow}>YOUR REPLY</Text><Text style={styles.headerTitle}>For {name ?? 'your friend'}</Text></View><Pressable onPress={() => setFacing((value) => value === 'back' ? 'front' : 'back')}><Text style={styles.switch}>↻</Text></Pressable></View>
-    <View style={[styles.frame, { flexDirection: momentLayout === 'vertical' ? 'row' : 'column' }]}><View style={{ flex: 1, backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center' }}><Text style={styles.labelText}>THEIR SIDE</Text></View><View style={{ flex: 1, overflow: 'hidden', borderLeftWidth: momentLayout === 'vertical' ? 1 : 0, borderTopWidth: momentLayout === 'horizontal' ? 1 : 0, borderColor: '#FFFFFF66' }}>{photo ? <Image source={{ uri: photo.uri }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <CameraView ref={camera} style={StyleSheet.absoluteFill} facing={facing} mode="picture" />}<View style={styles.label}><Text style={styles.labelText}>YOUR SIDE</Text></View></View></View>
+    <View style={[styles.frame, { flexDirection: isColumn ? 'column' : 'row' }]}>{sideOneFirst ? <>{theirSide}{ownSide}</> : <>{ownSide}{theirSide}</>}<View pointerEvents="none" style={isColumn ? styles.splitHorizontal : styles.splitVertical} /></View>
     <View style={styles.bottom}>{photo ? <View style={styles.actions}><Pressable disabled={busy} onPress={() => { setPhoto(null); preparedPhoto.current = null; }} style={styles.secondary}><Text style={styles.secondaryText}>Retake</Text></Pressable><Pressable disabled={busy} onPress={() => void finish()} style={styles.primary}><Text style={styles.primaryText}>{busy ? 'Finishing…' : 'Finish moment'}</Text></Pressable></View> : <><Text style={styles.copy}>Take the side that completes their moment.</Text><Pressable disabled={busy} onPress={() => void capture()} style={styles.shutter}><View style={styles.shutterInner} /></Pressable></>}</View>
   </Screen>;
 }
