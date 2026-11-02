@@ -18,7 +18,9 @@ export type Moment = {
   created_at: string;
   completed_at: string | null;
   expires_at: string;
+  layout: MomentLayout;
 };
+export type MomentLayout = 'vertical' | 'horizontal';
 export type PreparedPhoto = { uri: string; width: number; height: number; bytes: ArrayBuffer; byteLength: number };
 
 const MAX_PHOTO_EDGE = 1536;
@@ -129,11 +131,12 @@ async function uploadPhoto(momentId: string, side: 1 | 2, prepared: Promise<Prep
   }
 }
 
-export async function sendFirstSide(friendId: string, photo: CameraCapturedPicture, preparedPhoto?: Promise<PreparedPhoto>) {
+export async function sendFirstSide(friendId: string, photo: CameraCapturedPicture, layout: MomentLayout, preparedPhoto?: Promise<PreparedPhoto>) {
   const prepared = preparedPhoto ?? preparePhoto(photo);
   const momentRequest = client().rpc('create_moment', {
     target_id: friendId,
     request_key: Crypto.randomUUID(),
+    selected_layout: layout,
   });
   const { data, error } = await momentRequest;
   if (error) throw error;
