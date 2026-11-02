@@ -1,0 +1,15 @@
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Screen } from '@/components/Screen';
+import { enablePushNotifications, pushPermissionStatus } from '@/features/notifications/push';
+import { colors, radius, space } from '@/theme/tokens';
+
+export default function NotificationSettingsScreen() {
+  const [status, setStatus] = useState<string>('undetermined');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { void pushPermissionStatus().then(setStatus); }, []);
+  const enable = async () => { setBusy(true); try { await enablePushNotifications(); setStatus('granted'); } catch (error) { Alert.alert('Notifications unavailable', error instanceof Error ? error.message : 'Try again.', status === 'denied' ? [{ text: 'Cancel', style: 'cancel' }, { text: 'Open Settings', onPress: () => void Linking.openSettings() }] : undefined); } finally { setBusy(false); } };
+  return <Screen><View style={styles.header}><Pressable onPress={() => router.back()}><Text style={styles.back}>‹</Text></Pressable><Text style={styles.headerTitle}>Notifications</Text><View style={styles.spacer} /></View><View style={styles.content}><Text style={styles.title}>Stay in the moment</Text><Text style={styles.copy}>Jello only notifies you when a friend invites you, sends a side, completes your moment, or reacts.</Text><View style={styles.card}><Text style={styles.cardTitle}>{status === 'granted' ? 'Notifications are on' : 'Notifications are off'}</Text><Text style={styles.cardCopy}>{status === 'granted' ? 'You can change alerts and sounds in iPhone Settings.' : 'Turn them on when you are ready. Jello still works without notifications.'}</Text></View><Pressable disabled={busy} onPress={status === 'granted' ? () => void Linking.openSettings() : () => void enable()} style={styles.button}><Text style={styles.buttonText}>{status === 'granted' ? 'Open iPhone Settings' : busy ? 'Turning on…' : 'Turn on notifications'}</Text></Pressable></View></Screen>;
+}
+const styles = StyleSheet.create({ header: { height: 62, paddingHorizontal: space.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, back: { color: colors.text, fontSize: 40, fontWeight: '300' }, headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' }, spacer: { width: 24 }, content: { flex: 1, padding: space.lg }, title: { color: colors.text, fontSize: 31, fontWeight: '800' }, copy: { color: colors.secondary, fontSize: 16, lineHeight: 23, marginTop: 9 }, card: { marginTop: 28, borderRadius: radius.lg, backgroundColor: colors.surface, padding: 20 }, cardTitle: { color: colors.text, fontSize: 18, fontWeight: '700' }, cardCopy: { color: colors.secondary, fontSize: 14, lineHeight: 20, marginTop: 6 }, button: { marginTop: 18, minHeight: 54, borderRadius: radius.pill, backgroundColor: colors.apricot, alignItems: 'center', justifyContent: 'center' }, buttonText: { color: '#211506', fontSize: 16, fontWeight: '800' } });

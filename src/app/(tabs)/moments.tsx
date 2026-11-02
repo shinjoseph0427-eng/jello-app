@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleS
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { listMoments, type Moment } from '@/features/jello/api';
+import { blockUser, listMoments, reportMoment, type Moment } from '@/features/jello/api';
 import { colors, radius, space } from '@/theme/tokens';
 
 export default function MomentsScreen() {
@@ -14,6 +14,7 @@ export default function MomentsScreen() {
   const [loading, setLoading] = useState(true);
   const refresh = useCallback(async () => { try { setMoments(await listMoments()); } catch (error) { Alert.alert('Could not load moments', error instanceof Error ? error.message : 'Try again.'); } finally { setLoading(false); } }, []);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+  const manage = (moment: Moment) => Alert.alert(moment.other_display_name, 'Manage this private moment.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Report', onPress: () => void reportMoment(moment.id, 'other').then(() => Alert.alert('Report received', 'You can also block this person immediately.')).catch((error) => Alert.alert('Report not sent', error instanceof Error ? error.message : 'Try again.')) }, { text: 'Block', style: 'destructive', onPress: () => { const targetId = moment.initiator_id === session?.user.id ? moment.responder_id : moment.initiator_id; void blockUser(targetId).then(refresh).catch((error) => Alert.alert('Could not block', error instanceof Error ? error.message : 'Try again.')); } }]);
   return <Screen><ScrollView refreshControl={<RefreshControl refreshing={loading} tintColor={colors.apricot} onRefresh={() => { setLoading(true); void refresh(); }} />} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.content}>
     <SectionHeader title="Moments" detail="Private by default" />
     {loading && !moments.length ? <ActivityIndicator color={colors.apricot} /> : null}
@@ -25,11 +26,11 @@ export default function MomentsScreen() {
       const sideOneFirst = moment.layout === 'left' || moment.layout === 'top';
       const sideOne = <View key="one" style={styles.half}>{moment.side_one_url ? <Image source={{ uri: moment.side_one_url }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <Text style={styles.waiting}>?</Text>}</View>;
       const sideTwo = <View key="two" style={[styles.half, styles.second]}>{moment.side_two_url ? <Image source={{ uri: moment.side_two_url }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <Text style={styles.waiting}>?</Text>}</View>;
-      return <View key={moment.id} style={[styles.card, isColumn && styles.cardHorizontal]}>
+      return <Pressable key={moment.id} onLongPress={() => manage(moment)} style={[styles.card, isColumn && styles.cardHorizontal]}>
         {sideOneFirst ? <>{sideOne}{sideTwo}</> : <>{sideTwo}{sideOne}</>}
         <View pointerEvents="none" style={isColumn ? styles.centerDividerHorizontal : styles.centerDividerVertical} />
         <View style={styles.meta}><View style={styles.metaCopy}><Text style={styles.name}>{moment.other_display_name}</Text><Text style={styles.time}>{status}</Text></View>{canReply ? <Pressable onPress={() => router.push({ pathname: '/reply/[id]', params: { id: moment.id, name: moment.other_display_name, layout: moment.layout, sideOneUrl: moment.side_one_url } })} style={styles.replyButton}><Text style={styles.replyText}>Reply</Text></Pressable> : null}</View>
-      </View>;
+      </Pressable>;
     })}
   </ScrollView></Screen>;
 }

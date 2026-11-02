@@ -5,7 +5,7 @@ import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActionSheetIOS, Alert, Linking, Modal, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { getMyProfile, listFriends, listIncomingRequests, removeFriend, respondFriendRequest, searchPeople, sendFriendRequest, type Friend, type IncomingRequest } from '@/features/jello/api';
+import { blockUser, createFriendInvite, getMyProfile, listFriends, listIncomingRequests, removeFriend, respondFriendRequest, searchPeople, sendFriendRequest, type Friend, type IncomingRequest } from '@/features/jello/api';
 import { colors, radius, space } from '@/theme/tokens';
 
 export default function FriendsScreen() {
@@ -72,18 +72,22 @@ export default function FriendsScreen() {
     finally { setBusy(false); }
   };
 
-  const inviteText = me ? `Add me on Jello as @${me.username}. Two people. Two moments. One photo. jello://friends?username=${encodeURIComponent(me.username)}` : 'Join me on Jello.';
-  const share = () => Share.share({ message: inviteText });
-  const message = () => Linking.openURL(`sms:&body=${encodeURIComponent(inviteText)}`).catch(() => share());
-  const inviteContact = (contact: Contacts.ExistingContact) => {
+  const makeInviteText = async () => {
+    const token = await createFriendInvite();
+    return `Join me on Jello. Tap once to add ${me?.display_name ?? 'your friend'}: jello://invite/${token}`;
+  };
+  const share = async () => { try { await Share.share({ message: await makeInviteText() }); } catch (error) { Alert.alert('Invite unavailable', error instanceof Error ? error.message : 'Try again.'); } };
+  const message = async () => { try { const text = await makeInviteText(); await Linking.openURL(`sms:&body=${encodeURIComponent(text)}`); } catch { await share(); } };
+  const inviteContact = async (contact: Contacts.ExistingContact) => {
     const number = contact.phoneNumbers?.[0]?.number;
-    if (number) void Linking.openURL(`sms:${number}&body=${encodeURIComponent(inviteText)}`).catch(() => share());
-    else void share();
+    try { const text = await makeInviteText(); if (number) await Linking.openURL(`sms:${number}&body=${encodeURIComponent(text)}`); else await Share.share({ message: text }); }
+    catch (error) { Alert.alert('Invite unavailable', error instanceof Error ? error.message : 'Try again.'); }
   };
 
   const confirmRemove = (person: Friend) => {
     const perform = async () => { try { await removeFriend(person.id); await refresh(); } catch (error) { Alert.alert('Friend not removed', error instanceof Error ? error.message : 'Try again.'); } };
-    if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ title: person.display_name, options: ['Cancel', 'Remove friend'], cancelButtonIndex: 0, destructiveButtonIndex: 1 }, (index) => { if (index === 1) void perform(); });
+    const block = async () => { try { await blockUser(person.id); await refresh(); } catch (error) { Alert.alert('Could not block', error instanceof Error ? error.message : 'Try again.'); } };
+    if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ title: person.display_name, options: ['Cancel', 'Remove friend', 'Block'], cancelButtonIndex: 0, destructiveButtonIndex: 2 }, (index) => { if (index === 1) void perform(); if (index === 2) Alert.alert(`Block ${person.display_name}?`, 'They will not be able to find, invite, or send moments to you.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Block', style: 'destructive', onPress: () => void block() }]); });
     else Alert.alert(`Remove ${person.display_name}?`, undefined, [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: () => void perform() }]);
   };
 
@@ -113,7 +117,7 @@ export default function FriendsScreen() {
 
       <View style={styles.block}>
         <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>Your contacts</Text>{contacts.length ? <Text style={styles.sectionMeta}>{contacts.length}</Text> : null}</View>
-        {!contacts.length ? <Pressable onPress={() => setPermissionSheet(true)} style={styles.contactsPrompt}><View style={styles.contactsArt}><SymbolView name="person.crop.circle.badge.plus" tintColor={colors.apricot} size={46} /></View><View style={styles.promptCopy}><Text style={styles.promptTitle}>Find people you know</Text><Text style={styles.promptText}>Contacts stay on this iPhone. Jello only uses them to help you invite friends.</Text></View><Text style={styles.allowText}>Allow</Text></Pressable> : filteredContacts.map((contact, index) => <View key={contact.id} style={styles.person}>{avatar(contact.name, index)}<View style={styles.personCopy}><Text style={styles.name}>{contact.name}</Text><Text style={styles.username}>{contact.phoneNumbers?.[0]?.label ?? 'Contact'}</Text></View><Pressable onPress={() => inviteContact(contact)} style={styles.inviteButton}><Text style={styles.inviteButtonText}>Invite</Text></Pressable></View>)}
+        {!contacts.length ? <Pressable onPress={() => setPermissionSheet(true)} style={styles.contactsPrompt}><View style={styles.contactsArt}><SymbolView name="person.crop.circle.badge.plus" tintColor={colors.apricot} size={46} /></View><View style={styles.promptCopy}><Text style={styles.promptTitle}>Find people you know</Text><Text style={styles.promptText}>Contacts stay on this iPhone. Jello only uses them to help you invite friends.</Text></View><Text style={styles.allowText}>Allow</Text></Pressable> : filteredContacts.map((contact, index) => <View key={contact.id} style={styles.person}>{avatar(contact.name, index)}<View style={styles.personCopy}><Text style={styles.name}>{contact.name}</Text><Text style={styles.username}>{contact.phoneNumbers?.[0]?.label ?? 'Contact'}</Text></View><Pressable onPress={() => void inviteContact(contact)} style={styles.inviteButton}><Text style={styles.inviteButtonText}>Invite</Text></Pressable></View>)}
       </View>
 
       {friends.length ? <View style={styles.block}><View style={styles.sectionHeading}><Text style={styles.sectionTitle}>Friends</Text><Text style={styles.sectionMeta}>{friends.length}/20</Text></View>{friends.map((person) => personRow(person, undefined, () => confirmRemove(person)))}</View> : null}

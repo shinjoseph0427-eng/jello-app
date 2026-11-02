@@ -5,14 +5,20 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { colors, radius, space } from '@/theme/tokens';
 
-const rows = ['Notifications', 'Widget setup', 'Privacy and safety', 'Blocked people', 'Delete account'];
+const rows = [
+  { label: 'Notifications', route: '/settings/notifications' },
+  { label: 'Widget setup', route: '/settings/widget' },
+  { label: 'Privacy and safety', route: '/settings/privacy' },
+  { label: 'Blocked people', route: '/settings/blocked' },
+  { label: 'Delete account', route: '/settings/delete-account', danger: true },
+] as const;
 
 export default function ProfileScreen() {
   const { profile, signOut } = useAuth();
   return <Screen><ScrollView contentContainerStyle={styles.content}>
     <View style={styles.header}><View style={styles.avatar}><Text style={styles.avatarText}>j.</Text></View><Text style={styles.name}>{profile?.display_name ?? 'Your Jello'}</Text><Text style={styles.handle}>@{profile?.username ?? 'choose_a_username'}</Text><Pressable onPress={() => router.push({ pathname: '/onboarding/profile', params: { mode: 'edit' } })} style={styles.editButton}><Text style={styles.editText}>Edit profile</Text></Pressable></View>
     <View style={styles.status}><View style={[styles.statusDot, { backgroundColor: isSupabaseConfigured ? colors.success : colors.apricot }]} /><View style={styles.statusBody}><Text style={styles.statusTitle}>{isSupabaseConfigured ? 'Supabase connected' : 'Setup needed'}</Text><Text style={styles.statusCopy}>{isSupabaseConfigured ? 'Your private moments can sync.' : 'Add the publishable key to enable sign-in and sync.'}</Text></View></View>
-    <View style={styles.group}>{rows.map((row) => <View key={row} style={styles.row}><Text style={[styles.rowText, row === 'Delete account' && styles.danger]}>{row}</Text><Text style={styles.chevron}>›</Text></View>)}<Pressable onPress={() => void signOut()} style={[styles.row, styles.lastRow]}><Text style={styles.rowText}>Sign out</Text><Text style={styles.chevron}>›</Text></Pressable></View>
+    <View style={styles.group}>{rows.map((row) => <Pressable key={row.label} onPress={() => router.push(row.route)} style={styles.row}><Text style={[styles.rowText, 'danger' in row && row.danger && styles.danger]}>{row.label}</Text><Text style={styles.chevron}>›</Text></Pressable>)}<Pressable onPress={() => void signOut()} style={[styles.row, styles.lastRow]}><Text style={styles.rowText}>Sign out</Text><Text style={styles.chevron}>›</Text></Pressable></View>
     <Text style={styles.version}>Jello Two Sides · Development build</Text>
   </ScrollView></Screen>;
 }

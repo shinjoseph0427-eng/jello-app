@@ -1,6 +1,6 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -14,12 +14,14 @@ WebBrowser.maybeCompleteAuthSession();
 const AUTH_CALLBACK_URL = 'jello://auth/callback';
 
 export default function WelcomeScreen() {
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const destination = returnTo?.startsWith('/invite/') ? returnTo : '/(tabs)';
   const { session } = useAuth();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
-  if (session) return <Redirect href="/(tabs)" />;
+  if (session) return <Redirect href={destination as never} />;
 
   const apple = async () => {
     if (!supabase) return;
@@ -38,7 +40,7 @@ export default function WelcomeScreen() {
       if (fullName) {
         await supabase.auth.updateUser({ data: { full_name: fullName, given_name: credential.fullName?.givenName, family_name: credential.fullName?.familyName } });
       }
-      router.replace('/(tabs)');
+      router.replace(destination as never);
     } catch (error) {
       if ((error as { code?: string }).code !== 'ERR_REQUEST_CANCELED') {
         Alert.alert('Sign in failed', error instanceof Error ? error.message : 'Try again.');
@@ -76,7 +78,7 @@ export default function WelcomeScreen() {
         const { error: sessionError } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
         if (sessionError) throw sessionError;
       }
-      router.replace('/(tabs)');
+      router.replace(destination as never);
     } catch (error) {
       Alert.alert('Google sign in failed', error instanceof Error ? error.message : 'Try again.');
     } finally {
@@ -99,7 +101,7 @@ export default function WelcomeScreen() {
     const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' });
     setBusy(false);
     if (error) Alert.alert('Code not accepted', error.message);
-    else router.replace('/(tabs)');
+    else router.replace(destination as never);
   };
 
   return (

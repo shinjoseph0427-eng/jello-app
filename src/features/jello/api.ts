@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 
 export type Friend = { id: string; username: string; display_name: string; avatar_path: string | null; username_completed?: boolean };
 export type IncomingRequest = Friend & { request_id: string; sender_id: string; created_at: string };
+export type BlockedUser = Friend & { blocked_at: string };
+export type FriendInvite = Friend & { sender_id: string; expires_at: string };
 export type Moment = {
   id: string;
   status: 'pending_upload' | 'waiting_for_friend' | 'reply_uploading' | 'completed' | 'expired' | 'cancelled' | 'failed';
@@ -30,6 +32,8 @@ function client() {
   if (!supabase) throw new Error('Supabase is not configured.');
   return supabase;
 }
+
+function kickNotificationWorker() { void client().functions.invoke('send-notifications').catch(() => undefined); }
 
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const withTimeout = async <T>(operation: PromiseLike<T>, milliseconds = 12_000): Promise<T> => {
@@ -102,15 +106,67 @@ export async function listIncomingRequests() {
 export async function sendFriendRequest(targetId: string) {
   const { error } = await client().rpc('send_friend_request', { target_id: targetId });
   if (error) throw error;
+  kickNotificationWorker();
 }
 
 export async function respondFriendRequest(requestId: string, accept: boolean) {
   const { error } = await client().rpc('respond_friend_request', { request_id: requestId, accept });
   if (error) throw error;
+  if (accept) kickNotificationWorker();
 }
 
 export async function removeFriend(targetId: string) {
   const { error } = await client().rpc('remove_friend', { target_id: targetId });
+  if (error) throw error;
+}
+
+export async function blockUser(targetId: string) {
+  const { error } = await client().rpc('block_user', { target_id: targetId });
+  if (error) throw error;
+}
+
+export async function unblockUser(targetId: string) {
+  const { error } = await client().rpc('unblock_user', { target_id: targetId });
+  if (error) throw error;
+}
+
+export async function listBlockedUsers() {
+  const { data, error } = await client().rpc('list_blocked_users');
+  if (error) throw error;
+  return (data ?? []) as BlockedUser[];
+}
+
+export async function createFriendInvite() {
+  const { data, error } = await client().rpc('create_friend_invite');
+  if (error) throw error;
+  return data as string;
+}
+
+export async function getFriendInvite(token: string) {
+  const { data, error } = await client().rpc('get_friend_invite', { raw_token: token });
+  if (error) throw error;
+  return (data?.[0] ?? null) as FriendInvite | null;
+}
+
+export async function acceptFriendInvite(token: string) {
+  const { data, error } = await client().rpc('accept_friend_invite', { raw_token: token });
+  if (error) throw error;
+  kickNotificationWorker();
+  return data as string;
+}
+
+export async function reportMoment(momentId: string, reason: 'nudity' | 'harassment' | 'violence' | 'impersonation' | 'spam' | 'other', details?: string) {
+  const { error } = await client().rpc('report_moment', { target_moment_id: momentId, report_reason: reason, report_details: details ?? null });
+  if (error) throw error;
+}
+
+export async function registerPushToken(token: string, deviceId: string, platform: 'ios' | 'android', appVersion?: string) {
+  const { error } = await client().rpc('register_push_token', { push_token: token, target_device_id: deviceId, target_platform: platform, target_app_version: appVersion ?? null });
+  if (error) throw error;
+}
+
+export async function deleteMyAccount() {
+  const { error } = await client().rpc('delete_my_account', { confirmation: 'DELETE' });
   if (error) throw error;
 }
 
@@ -135,6 +191,7 @@ async function uploadPhoto(momentId: string, side: 1 | 2, prepared: Promise<Prep
       }), 10_000);
       if (error) throw error;
     });
+    kickNotificationWorker();
     if (__DEV__) console.info('[photo-upload]', { side, bytes: photo.byteLength, elapsedMs: Date.now() - startedAt });
   } catch (error) {
     await client().storage.from('jello-photos').remove([path]);
