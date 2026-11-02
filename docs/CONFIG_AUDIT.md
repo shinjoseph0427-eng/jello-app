@@ -14,7 +14,7 @@ Audited on 2026-11-02. Secret values are intentionally redacted.
 | EAS project ID | `307a90b0-4ac0-4b74-9434-9eb4fba5a459` | Matches `app.json` |
 | iOS bundle ID | `app.jello.twosides` | Matches App ID and profile |
 | Apple team | `Jiseong Shin`, `V3GLK46D7Z` | Individual team |
-| Registered iPhone | `00008120-001179901A12601E` | Included in current Ad Hoc profile |
+| Registered iPhones | `00008120-001179901A12601E`, `00008150-000559AC0CF8C01C` | Both included in current Ad Hoc profile |
 | Supabase | `Jello-app`, ref `ksaqpwjvocgyiycdofym` | Linked and healthy |
 
 The display names do not need to be identical. Signing depends on the EAS project ID, Apple team, bundle ID, certificate, profile, and device UDID; those identifiers match.
@@ -43,10 +43,10 @@ The display names do not need to be identical. Signing depends on the EAS projec
 - Certificate expiration: 2027-11-02
 - Provisioning profile: `*[expo] app.jello.twosides AdHoc 1793612539933`
 - Profile UUID: `d5e05e63-30bc-42be-bc23-9c273e528aa5`
-- Device UDID included: yes
+- Device UDIDs included: `00008120-001179901A12601E` and the currently registered iPhone `00008150-000559AC0CF8C01C`
 - Bundle application identifier: `V3GLK46D7Z.app.jello.twosides`
 - Apple online provisioning verification (`PPQCheck`): enabled
-- Latest verified device build: `3d4f1e22-1cbb-477c-8596-84c8e369c07f`, build number 2
+- Latest verified device build: `69956b83-104d-4942-be5b-fb263b582db8`, build number 4
 
 ## Missing product configuration
 
