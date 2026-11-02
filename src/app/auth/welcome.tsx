@@ -1,6 +1,5 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
-import * as Linking from 'expo-linking';
 import { Redirect, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
@@ -11,6 +10,8 @@ import { supabase } from '@/lib/supabase';
 import { colors, radius, space } from '@/theme/tokens';
 
 WebBrowser.maybeCompleteAuthSession();
+
+const AUTH_CALLBACK_URL = 'jello://auth/callback';
 
 export default function WelcomeScreen() {
   const { session } = useAuth();
@@ -51,7 +52,7 @@ export default function WelcomeScreen() {
     if (!supabase) return;
     setBusy(true);
     try {
-      const redirectTo = Linking.createURL('auth/callback');
+      const redirectTo = AUTH_CALLBACK_URL;
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo, skipBrowserRedirect: true, queryParams: { access_type: 'offline', prompt: 'consent' } },
@@ -59,7 +60,8 @@ export default function WelcomeScreen() {
       if (error) throw error;
       if (!data.url) throw new Error('Google did not return an authorization URL.');
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-      if (result.type !== 'success') return;
+      if (result.type === 'cancel' || result.type === 'dismiss') return;
+      if (result.type !== 'success') throw new Error('Google sign in did not return to Jello.');
       const callback = new URL(result.url);
       const query = new URLSearchParams(callback.search);
       const fragment = new URLSearchParams(callback.hash.replace(/^#/, ''));
