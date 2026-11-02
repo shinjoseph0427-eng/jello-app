@@ -55,6 +55,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build:ios:device": "eas build --platform ios --profile development --refresh-ad-hoc-provisioning-profile",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "validate": "npm run typecheck && npm run lint"
