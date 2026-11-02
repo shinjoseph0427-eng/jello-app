@@ -1,7 +1,10 @@
 # Blockers
 
-- Apple Developer authentication for `jiseongsin68@gmail.com` requires the account password and potentially 2FA. The saved local Apple session is expired, so physical-device signing credentials could not be generated unattended.
-- Supabase email authentication is enabled, but the Apple provider is currently disabled. Enabling it requires the Apple provider credentials created through the Apple Developer account.
-- Windows cannot run the iOS artifact locally or verify WidgetKit, Sign in with Apple, APNs, or TestFlight on-device behavior.
-- GitHub push has not been performed.
-- WEEKLY contains unrelated uncommitted changes and must remain read-only.
+- Two-account E2E cannot be claimed until authorized test sessions complete request, acceptance, upload, reply, and reveal.
+- Google OAuth is configured but final iPhone return/session behavior is not recorded.
+- Build 4 is based on `008601c`, not current HEAD. Metro can serve current JS, but a new standalone build is required for offline QA.
+- WidgetKit requires App Group provisioning plus macOS/EAS compile and device validation.
+- Owner decisions are missing for Privacy/Terms/Support, age/regions, moderation, export consent, and retention.
+- Production SMTP, Sentry, analytics, and push delivery backend are not configured.
+
+Never add passwords, private keys, service-role keys, personal photos, or signed URLs here.

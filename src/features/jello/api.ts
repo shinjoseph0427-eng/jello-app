@@ -2,7 +2,7 @@ import type { CameraCapturedPicture } from 'expo-camera';
 import * as Crypto from 'expo-crypto';
 import { supabase } from '@/lib/supabase';
 
-export type Friend = { id: string; username: string; display_name: string; avatar_path: string | null };
+export type Friend = { id: string; username: string; display_name: string; avatar_path: string | null; username_completed?: boolean };
 export type IncomingRequest = Friend & { request_id: string; sender_id: string; created_at: string };
 export type Moment = {
   id: string;
@@ -31,9 +31,18 @@ export async function listFriends() {
 }
 
 export async function getMyProfile() {
-  const { data, error } = await client().from('profiles').select('id, username, display_name, avatar_path').single();
+  const { data, error } = await client().from('profiles').select('id, username, display_name, avatar_path, username_completed').single();
   if (error) throw error;
   return data as Friend;
+}
+
+export async function setProfileIdentity(username: string, displayName: string) {
+  const { data, error } = await client().rpc('set_profile_identity', {
+    requested_username: username,
+    requested_display_name: displayName,
+  });
+  if (error) throw error;
+  return (data?.[0] ?? null) as Friend | null;
 }
 
 export async function searchPeople(query: string) {
