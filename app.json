@@ -4,11 +4,11 @@
     "slug": "jello-two-sides",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/jello-app-icon.png",
     "scheme": "jello",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/jello-app-icon.png",
       "bundleIdentifier": "app.jello.twosides",
       "supportsTablet": false,
       "usesAppleSignIn": true,
