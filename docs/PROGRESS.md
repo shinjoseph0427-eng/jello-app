@@ -12,6 +12,7 @@
 - Created and linked the EAS project `@shinjoseph0427/jello-two-sides`.
 - Added development-client, simulator, preview, and production EAS profiles and EAS Update configuration.
 - Added development/preview/production EAS environment variables for the public Supabase URL and publishable key.
+- Completed a real iOS Simulator development build on EAS (`4c26f6bb-e71c-49ee-97cb-3d1aac646c8a`).
 
 ## Verified
 
