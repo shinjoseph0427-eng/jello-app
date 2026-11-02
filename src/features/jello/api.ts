@@ -32,11 +32,22 @@ function client() {
 }
 
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const withTimeout = async <T>(operation: PromiseLike<T>, milliseconds = 12_000): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.resolve(operation),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Network request timed out.')), milliseconds); }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
 async function withRetry<T>(operation: () => Promise<T>, attempts = 3): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try { return await operation(); }
-    catch (error) { lastError = error; if (attempt < attempts - 1) await delay(250 * (2 ** attempt)); }
+    catch (error) { lastError = error; if (attempt < attempts - 1) await delay((250 * (2 ** attempt)) + Math.random() * 180); }
   }
   throw lastError;
 }
@@ -112,16 +123,16 @@ async function uploadPhoto(momentId: string, side: 1 | 2, prepared: Promise<Prep
   const startedAt = Date.now();
   try {
     await withRetry(async () => {
-      const { error } = await client().storage.from('jello-photos').upload(path, photo.bytes, {
+      const { error } = await withTimeout(client().storage.from('jello-photos').upload(path, photo.bytes, {
         contentType: 'image/jpeg', cacheControl: '31536000', upsert: true,
-      });
+      }), 15_000);
       if (error) throw error;
     });
     await withRetry(async () => {
-      const { error } = await client().rpc('attach_moment_photo', {
+      const { error } = await withTimeout(client().rpc('attach_moment_photo', {
         target_moment_id: momentId, photo_side: side, object_path: path,
         photo_width: photo.width, photo_height: photo.height,
-      });
+      }), 10_000);
       if (error) throw error;
     });
     if (__DEV__) console.info('[photo-upload]', { side, bytes: photo.byteLength, elapsedMs: Date.now() - startedAt });
@@ -131,14 +142,14 @@ async function uploadPhoto(momentId: string, side: 1 | 2, prepared: Promise<Prep
   }
 }
 
-export async function sendFirstSide(friendId: string, photo: CameraCapturedPicture, layout: MomentLayout, preparedPhoto?: Promise<PreparedPhoto>) {
+export async function sendFirstSide(friendId: string, photo: CameraCapturedPicture, layout: MomentLayout, preparedPhoto?: Promise<PreparedPhoto>, requestKey = Crypto.randomUUID()) {
   const prepared = preparedPhoto ?? preparePhoto(photo);
   const momentRequest = client().rpc('create_moment', {
     target_id: friendId,
-    request_key: Crypto.randomUUID(),
+    request_key: requestKey,
     selected_layout: layout,
   });
-  const { data, error } = await momentRequest;
+  const { data, error } = await withTimeout(momentRequest, 10_000);
   if (error) throw error;
   const momentId = data as string;
   await uploadPhoto(momentId, 1, prepared);

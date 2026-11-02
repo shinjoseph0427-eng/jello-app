@@ -3,9 +3,10 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { preparePhoto, sendReply, type MomentLayout, type PreparedPhoto } from '@/features/jello/api';
+import { preparePhoto, type MomentLayout, type PreparedPhoto } from '@/features/jello/api';
+import { enqueueReply } from '@/features/jello/photoOutbox';
 import { colors, radius, space } from '@/theme/tokens';
 
 export default function ReplyScreen() {
@@ -35,18 +36,11 @@ export default function ReplyScreen() {
     }
   };
 
-  const finish = async () => {
+  const finish = () => {
     if (!photo || !id) return;
-    setBusy(true);
-    try {
-      await sendReply(id, photo, preparedPhoto.current ?? undefined);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Moment complete', `Your side and ${name ?? 'your friend'}'s side are together.`, [{ text: 'See it', onPress: () => router.replace('/moments') }]);
-    } catch (error) {
-      Alert.alert('Could not send reply', error instanceof Error ? error.message : 'Try again.');
-    } finally {
-      setBusy(false);
-    }
+    enqueueReply(id, photo, preparedPhoto.current ?? undefined);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    router.replace('/moments');
   };
 
   if (!permission?.granted) {
@@ -61,7 +55,7 @@ export default function ReplyScreen() {
   return <Screen>
     <View style={styles.header}><Pressable onPress={() => router.back()}><Text style={styles.close}>×</Text></Pressable><View><Text style={styles.eyebrow}>YOUR REPLY</Text><Text style={styles.headerTitle}>For {name ?? 'your friend'}</Text></View><Pressable onPress={() => setFacing((value) => value === 'back' ? 'front' : 'back')}><Text style={styles.switch}>↻</Text></Pressable></View>
     <View style={[styles.frame, { flexDirection: isColumn ? 'column' : 'row' }]}>{sideOneFirst ? <>{theirSide}{ownSide}</> : <>{ownSide}{theirSide}</>}<View pointerEvents="none" style={isColumn ? styles.splitHorizontal : styles.splitVertical} /></View>
-    <View style={styles.bottom}>{photo ? <View style={styles.actions}><Pressable disabled={busy} onPress={() => { setPhoto(null); preparedPhoto.current = null; }} style={styles.secondary}><Text style={styles.secondaryText}>Retake</Text></Pressable><Pressable disabled={busy} onPress={() => void finish()} style={styles.primary}><Text style={styles.primaryText}>{busy ? 'Finishing…' : 'Finish moment'}</Text></Pressable></View> : <><Text style={styles.copy}>Take the side that completes their moment.</Text><Pressable disabled={busy} onPress={() => void capture()} style={styles.shutter}><View style={styles.shutterInner} /></Pressable></>}</View>
+    <View style={styles.bottom}>{photo ? <View style={styles.actions}><Pressable onPress={() => { setPhoto(null); preparedPhoto.current = null; }} style={styles.secondary}><Text style={styles.secondaryText}>Retake</Text></Pressable><Pressable onPress={finish} style={styles.primary}><Text style={styles.primaryText}>Finish moment</Text></Pressable></View> : <><Text style={styles.copy}>Take the side that completes their moment.</Text><Pressable disabled={busy} onPress={() => void capture()} style={styles.shutter}><View style={styles.shutterInner} /></Pressable></>}</View>
   </Screen>;
 }
 
