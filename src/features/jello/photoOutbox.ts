@@ -9,6 +9,20 @@ const prepared = new Map<string, Promise<PreparedPhoto>>();
 let hydrated = false;
 let running = false;
 let retryTimer: ReturnType<typeof setTimeout> | undefined;
+let status: PhotoOutboxStatus = 'idle';
+let idleTimer: ReturnType<typeof setTimeout> | undefined;
+const listeners = new Set<() => void>();
+
+export type PhotoOutboxStatus = 'idle' | 'sending' | 'retrying' | 'sent';
+
+function setStatus(next: PhotoOutboxStatus) {
+  if (idleTimer) { clearTimeout(idleTimer); idleTimer = undefined; }
+  if (status !== next) { status = next; for (const listener of listeners) listener(); }
+  if (next === 'sent') idleTimer = setTimeout(() => setStatus('idle'), 1800);
+}
+
+export const getPhotoOutboxStatus = () => status;
+export function subscribePhotoOutbox(listener: () => void) { listeners.add(listener); return () => listeners.delete(listener); }
 
 type PhotoRef = Pick<CameraCapturedPicture, 'uri' | 'width' | 'height'>;
 type OutboxJob = {
@@ -31,6 +45,7 @@ async function hydrate() {
     catch { await AsyncStorage.removeItem(STORAGE_KEY).catch(() => undefined); }
   }
   hydrated = true;
+  if (jobs.size) setStatus('sending');
 }
 
 const persist = () => AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([...jobs.values()])).catch(() => undefined);
@@ -53,10 +68,12 @@ async function drain() {
         jobs.delete(job.id);
         prepared.delete(job.id);
         await persist();
+        setStatus(jobs.size ? 'sending' : 'sent');
       } catch {
         job.attempts += 1;
         jobs.set(job.id, job);
         await persist();
+        setStatus('retrying');
         schedule(Math.min(30_000, 750 * (2 ** Math.min(job.attempts, 5))) + Math.random() * 500);
         break;
       }
@@ -68,6 +85,7 @@ async function drain() {
 
 function enqueue(job: OutboxJob, preparation?: Promise<PreparedPhoto>) {
   if (preparation) prepared.set(job.id, preparation);
+  setStatus('sending');
   void hydrate().then(() => {
     jobs.set(job.id, job);
     void persist();
