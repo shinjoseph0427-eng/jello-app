@@ -9,6 +9,7 @@ const rows = [
   { label: 'Notifications', route: '/settings/notifications' },
   { label: 'Widget setup', route: '/settings/widget' },
   { label: 'Privacy and safety', route: '/settings/privacy' },
+  { label: 'Terms of service', route: '/terms' },
   { label: 'Blocked people', route: '/settings/blocked' },
   { label: 'Delete account', route: '/settings/delete-account', danger: true },
 ] as const;
