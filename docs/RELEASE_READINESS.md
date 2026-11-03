@@ -17,6 +17,7 @@ Updated: 2026-11-02
 - App Store metadata is prepared in `store.config.json` for English and Korean.
 - Supabase production migrations and Edge Function are deployed; database lint reports zero errors.
 - TypeScript, Expo lint, Expo Doctor, iOS bundle export, and web export pass.
+- Production dependency audit reports 0 critical and 0 high vulnerabilities. The remaining 14 moderate advisories are transitive Expo CLI/config tooling dependencies. Do not run `npm audit fix --force`: npm's proposed resolution downgrades or replaces the Expo SDK and would break the validated SDK 57 dependency graph. Recheck after the next compatible Expo patch release.
 
 ## Apple account actions still required
 
