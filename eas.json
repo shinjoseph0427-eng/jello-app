@@ -20,6 +20,7 @@
     "production": {
       "ios": {
         "appleTeamId": "V3GLK46D7Z",
+        "ascAppId": "6829979463",
         "appName": "Jello — Two Sides",
         "sku": "jello-two-sides-ios",
         "language": "en-US",
