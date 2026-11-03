@@ -10,6 +10,7 @@
     "ios": {
       "icon": "./assets/images/jello-app-icon.png",
       "bundleIdentifier": "app.jello.twosides",
+      "associatedDomains": ["applinks:jello-two-sides.expo.app"],
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "infoPlist": {
@@ -61,6 +62,27 @@
           "backgroundColor": "#0B0B0C",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      [
+        "expo-widgets",
+        {
+          "bundleIdentifier": "app.jello.twosides.widgets",
+          "groupIdentifier": "group.app.jello.twosides",
+          "widgets": [
+            {
+              "name": "JelloMomentWidget",
+              "displayName": "Jello Two Sides",
+              "description": "Keep your latest completed moment close.",
+              "supportedFamilies": ["systemSmall", "systemMedium"],
+              "contentMarginsDisabled": true,
+              "ios": {
+                "supportedFamilies": ["systemSmall", "systemMedium"],
+                "contentMarginsDisabled": true
+              },
+              "android": null
+            }
+          ]
         }
       ]
     ],

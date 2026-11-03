@@ -1,0 +1,33 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "copyright": "2026 Jello",
+    "categories": ["SOCIAL_NETWORKING", "PHOTO_AND_VIDEO"],
+    "advisory": {
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE", "contests": "NONE", "gamblingSimulated": "NONE", "horrorOrFearThemes": "NONE",
+      "matureOrSuggestiveThemes": "INFREQUENT_OR_MILD", "medicalOrTreatmentInformation": "NONE", "profanityOrCrudeHumor": "INFREQUENT_OR_MILD",
+      "sexualContentGraphicAndNudity": "NONE", "sexualContentOrNudity": "NONE", "violenceCartoonOrFantasy": "NONE", "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE", "gambling": false, "unrestrictedWebAccess": false, "kidsAgeBand": null,
+      "ageRatingOverride": "NONE", "koreaAgeRatingOverride": "NONE"
+    },
+    "info": {
+      "en-US": {
+        "title": "Jello — Two Sides", "subtitle": "Two moments. One photo.",
+        "description": "Jello is a private photo ritual for close friends. Take one side of a photo and send it to a friend. When they reply with their side, one Two Sides moment is revealed.\n\n• Camera-first sharing\n• Private friend circles\n• Four split-photo layouts\n• Home Screen widget\n• Reactions, notifications, blocking, and reporting\n• Private by default — public sharing requires approval from both people\n\nJello is built for genuine moments, not follower counts.",
+        "keywords": ["friends", "photo", "camera", "widget", "social", "moments"],
+        "releaseNotes": "Welcome to Jello. Create private Two Sides moments with close friends, keep the latest one on your Home Screen, and control every public share together.",
+        "promoText": "Two people. Two moments. One photo.", "marketingUrl": "https://jello-two-sides.expo.app/",
+        "supportUrl": "https://jello-two-sides.expo.app/privacy", "privacyPolicyUrl": "https://jello-two-sides.expo.app/privacy", "privacyChoicesUrl": "https://jello-two-sides.expo.app/privacy"
+      },
+      "ko": {
+        "title": "Jello — Two Sides", "subtitle": "두 순간이 하나의 사진으로",
+        "description": "Jello는 가까운 친구와 만드는 프라이빗 사진 소셜 앱입니다. 내가 사진의 한쪽을 찍어 보내고, 친구가 자신의 순간으로 답하면 하나의 Two Sides 사진이 완성됩니다.\n\n• 카메라 중심의 빠른 전송\n• 가까운 친구만을 위한 관계\n• 네 가지 분할 사진 레이아웃\n• 홈 화면 위젯\n• 반응, 알림, 차단 및 신고\n• 기본은 비공개이며 두 사람 모두 동의해야 공개 가능\n\n팔로워 수보다 진짜 순간에 집중하세요.",
+        "keywords": ["친구", "사진", "카메라", "위젯", "소셜", "순간"],
+        "releaseNotes": "Jello의 첫 버전입니다. 가까운 친구와 Two Sides 순간을 만들고 홈 화면 위젯에서 확인하세요.",
+        "promoText": "두 사람. 두 순간. 하나의 사진.", "marketingUrl": "https://jello-two-sides.expo.app/",
+        "supportUrl": "https://jello-two-sides.expo.app/privacy", "privacyPolicyUrl": "https://jello-two-sides.expo.app/privacy", "privacyChoicesUrl": "https://jello-two-sides.expo.app/privacy"
+      }
+    },
+    "release": { "automaticRelease": false, "phasedRelease": false }
+  }
+}

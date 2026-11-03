@@ -74,7 +74,7 @@ export default function FriendsScreen() {
 
   const makeInviteText = async () => {
     const token = await createFriendInvite();
-    return `Join me on Jello. Tap once to add ${me?.display_name ?? 'your friend'}: jello://invite/${token}`;
+    return `Join me on Jello. Tap once to add ${me?.display_name ?? 'your friend'}: https://jello-two-sides.expo.app/invite?token=${encodeURIComponent(token)}`;
   };
   const share = async () => { try { await Share.share({ message: await makeInviteText() }); } catch (error) { Alert.alert('Invite unavailable', error instanceof Error ? error.message : 'Try again.'); } };
   const message = async () => { try { const text = await makeInviteText(); await Linking.openURL(`sms:&body=${encodeURIComponent(text)}`); } catch { await share(); } };

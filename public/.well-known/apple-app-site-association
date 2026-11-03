@@ -1,0 +1,18 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["V3GLK46D7Z.app.jello.twosides"],
+        "components": [
+          { "/": "/invite", "comment": "One-tap friend invitations" }
+        ]
+      },
+      {
+        "appID": "V3GLK46D7Z.app.jello.twosides",
+        "paths": ["/invite"]
+      }
+    ]
+  },
+  "activitycontinuation": { "apps": ["V3GLK46D7Z.app.jello.twosides"] }
+}

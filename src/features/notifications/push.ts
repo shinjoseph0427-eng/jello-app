@@ -3,7 +3,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { registerPushToken } from '@/features/jello/api';
+import { registerPushToken, wakeNotificationWorker } from '@/features/jello/api';
 
 const DEVICE_ID_KEY = 'jello.push-device-id';
 
@@ -32,5 +32,12 @@ export async function enablePushNotifications() {
   if (!projectId) throw new Error('EAS project ID is missing.');
   const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
   await registerPushToken(token, await deviceId(), Platform.OS as 'ios' | 'android', Constants.expoConfig?.version);
+  wakeNotificationWorker();
   return token;
+}
+
+export async function refreshPushTokenIfGranted() {
+  if (!Device.isDevice) return;
+  if ((await Notifications.getPermissionsAsync()).status !== 'granted') return;
+  await enablePushNotifications();
 }

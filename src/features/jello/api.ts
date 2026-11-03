@@ -23,6 +23,11 @@ export type Moment = {
   layout: MomentLayout;
 };
 export type MomentLayout = 'left' | 'right' | 'top' | 'bottom';
+export type PublicMoment = {
+  id: string; initiator_id: string; responder_id: string; initiator_name: string; responder_name: string;
+  side_one_path: string; side_two_path: string; side_one_url?: string; side_two_url?: string;
+  layout: MomentLayout; caption: string | null; published_at: string; like_count: number; liked_by_me: boolean; rank_score: number;
+};
 export type PreparedPhoto = { uri: string; width: number; height: number; bytes: ArrayBuffer; byteLength: number };
 
 const MAX_PHOTO_EDGE = 1536;
@@ -34,6 +39,7 @@ function client() {
 }
 
 function kickNotificationWorker() { void client().functions.invoke('send-notifications').catch(() => undefined); }
+export function wakeNotificationWorker() { kickNotificationWorker(); }
 
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const withTimeout = async <T>(operation: PromiseLike<T>, milliseconds = 12_000): Promise<T> => {
@@ -158,6 +164,30 @@ export async function acceptFriendInvite(token: string) {
 export async function reportMoment(momentId: string, reason: 'nudity' | 'harassment' | 'violence' | 'impersonation' | 'spam' | 'other', details?: string) {
   const { error } = await client().rpc('report_moment', { target_moment_id: momentId, report_reason: reason, report_details: details ?? null });
   if (error) throw error;
+}
+
+export async function setMomentPublicConsent(momentId: string, consent: boolean, caption?: string) {
+  const { data, error } = await client().rpc('set_moment_public_consent', { target_moment_id: momentId, consent, caption: caption ?? null });
+  if (error) throw error;
+  return data as 'private' | 'waiting_for_other' | 'public';
+}
+
+export async function listPublicMoments(beforeTime?: string) {
+  const { data, error } = await client().rpc('list_public_moments', { result_limit: 30, before_time: beforeTime ?? null });
+  if (error) throw error;
+  const moments = (data ?? []) as PublicMoment[];
+  const paths = [...new Set(moments.flatMap((moment) => [moment.side_one_path, moment.side_two_path]).filter(Boolean))];
+  if (!paths.length) return moments;
+  const { data: signed, error: signedError } = await client().storage.from('jello-photos').createSignedUrls(paths, 3600);
+  if (signedError) throw signedError;
+  const urls = new Map(signed.map((item, index) => [paths[index], item.signedUrl]));
+  return moments.map((moment) => ({ ...moment, like_count: Number(moment.like_count), side_one_url: urls.get(moment.side_one_path) ?? undefined, side_two_url: urls.get(moment.side_two_path) ?? undefined }));
+}
+
+export async function togglePublicMomentLike(momentId: string) {
+  const { data, error } = await client().rpc('toggle_public_moment_like', { target_moment_id: momentId });
+  if (error) throw error;
+  return Boolean(data);
 }
 
 export async function registerPushToken(token: string, deviceId: string, platform: 'ios' | 'android', appVersion?: string) {

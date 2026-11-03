@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { getMyProfile, type Friend } from '@/features/jello/api';
 import { supabase } from '@/lib/supabase';
+import { refreshPushTokenIfGranted } from '@/features/notifications/push';
 
 type AuthValue = {
   session: Session | null;
@@ -35,6 +36,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => { setSession(nextSession); setLoading(false); void loadProfile(nextSession); });
     return () => data.subscription.unsubscribe();
   }, [loadProfile]);
+
+  useEffect(() => { if (session) void refreshPushTokenIfGranted().catch(() => undefined); }, [session]);
 
   const value = useMemo<AuthValue>(() => ({
     session,

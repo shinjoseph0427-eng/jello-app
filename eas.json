@@ -16,5 +16,15 @@
     "preview": { "distribution": "internal" },
     "production": { "autoIncrement": true }
   },
-  "submit": { "production": {} }
+  "submit": {
+    "production": {
+      "ios": {
+        "appleTeamId": "V3GLK46D7Z",
+        "appName": "Jello — Two Sides",
+        "sku": "jello-two-sides-ios",
+        "language": "en-US",
+        "metadataPath": "./store.config.json"
+      }
+    }
+  }
 }
