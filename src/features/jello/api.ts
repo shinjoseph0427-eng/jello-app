@@ -21,6 +21,11 @@ export type Moment = {
   completed_at: string | null;
   expires_at: string;
   layout: MomentLayout;
+  visibility: 'private' | 'public';
+  public_caption: string | null;
+  published_at: string | null;
+  approved_by_me: boolean;
+  approved_by_other: boolean;
 };
 export type MomentLayout = 'left' | 'right' | 'top' | 'bottom';
 export type PublicMoment = {
@@ -29,6 +34,19 @@ export type PublicMoment = {
   layout: MomentLayout; caption: string | null; published_at: string; like_count: number; liked_by_me: boolean; rank_score: number;
 };
 export type PreparedPhoto = { uri: string; width: number; height: number; bytes: ArrayBuffer; byteLength: number };
+export type AppNotification = {
+  id: string;
+  event_type: 'friend_request' | 'friend_accepted' | 'moment_received' | 'moment_completed' | 'reaction' | 'public_approval_requested' | 'moment_published';
+  entity_id: string | null;
+  title: string;
+  body: string;
+  data: { url?: string; momentId?: string } | null;
+  actor_id: string | null;
+  actor_name: string | null;
+  actor_avatar_path: string | null;
+  read_at: string | null;
+  created_at: string;
+};
 
 const MAX_PHOTO_EDGE = 1536;
 const JPEG_QUALITY = 0.72;
@@ -169,11 +187,12 @@ export async function reportMoment(momentId: string, reason: 'nudity' | 'harassm
 export async function setMomentPublicConsent(momentId: string, consent: boolean, caption?: string) {
   const { data, error } = await client().rpc('set_moment_public_consent', { target_moment_id: momentId, consent, caption: caption ?? null });
   if (error) throw error;
+  kickNotificationWorker();
   return data as 'private' | 'waiting_for_other' | 'public';
 }
 
-export async function listPublicMoments(beforeTime?: string) {
-  const { data, error } = await client().rpc('list_public_moments', { result_limit: 30, before_time: beforeTime ?? null });
+export async function listPublicMoments(offset = 0) {
+  const { data, error } = await client().rpc('list_public_moments_v2', { result_limit: 20, result_offset: offset });
   if (error) throw error;
   const moments = (data ?? []) as PublicMoment[];
   const paths = [...new Set(moments.flatMap((moment) => [moment.side_one_path, moment.side_two_path]).filter(Boolean))];
@@ -184,10 +203,44 @@ export async function listPublicMoments(beforeTime?: string) {
   return moments.map((moment) => ({ ...moment, like_count: Number(moment.like_count), side_one_url: urls.get(moment.side_one_path) ?? undefined, side_two_url: urls.get(moment.side_two_path) ?? undefined }));
 }
 
+export async function recordPublicMomentImpressions(momentIds: string[]) {
+  if (!momentIds.length) return;
+  const { error } = await client().rpc('record_public_moment_impressions', { moment_ids: [...new Set(momentIds)].slice(0, 50) });
+  if (error) throw error;
+}
+
 export async function togglePublicMomentLike(momentId: string) {
   const { data, error } = await client().rpc('toggle_public_moment_like', { target_moment_id: momentId });
   if (error) throw error;
+  if (data) kickNotificationWorker();
   return Boolean(data);
+}
+
+export async function listNotifications(beforeTime?: string) {
+  const { data, error } = await client().rpc('list_notifications', { result_limit: 40, before_time: beforeTime ?? null });
+  if (error) throw error;
+  return (data ?? []) as AppNotification[];
+}
+
+export async function notificationUnreadCount() {
+  const { data, error } = await client().rpc('notification_unread_count');
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
+export async function markNotificationRead(notificationId: string) {
+  const { error } = await client().rpc('mark_notification_read', { target_notification_id: notificationId });
+  if (error) throw error;
+}
+
+export async function markAllNotificationsRead() {
+  const { error } = await client().rpc('mark_all_notifications_read');
+  if (error) throw error;
+}
+
+export async function dismissNotification(notificationId: string) {
+  const { error } = await client().rpc('dismiss_notification', { target_notification_id: notificationId });
+  if (error) throw error;
 }
 
 export async function registerPushToken(token: string, deviceId: string, platform: 'ios' | 'android', appVersion?: string) {
